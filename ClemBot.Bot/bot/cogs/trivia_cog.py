@@ -1,6 +1,8 @@
 import json
 import logging
+from urllib import response
 import uuid
+import random
 import aiohttp
 import discord
 import discord.ext.commands as commands
@@ -26,8 +28,10 @@ class TriviaCog(commands.Cog):
 
 
     async def Triviacog(self, ctx, *input:str):
-       async with await self.session.post(url=DEFAULT_URL) as resp:  
+       async with await self.session.get(url=DEFAULT_URL) as resp:  
             response = json.loads(await resp.text())
+            correct_answers = self.JsonParser(response)
+            await self.Dict_Publisher(ctx, response)
 
        return
 
@@ -74,19 +78,61 @@ class TriviaCog(commands.Cog):
             if(searchingthis.find(QUESTIONTYPE) != -1):
                 questiontype = x+9
 
-                url = R"https://opentdb.com/api.php?amount="+questionnumber+"&category="+triviacategory+"&difficulty="+difficulty+"&type="+questiontype
-     async with await self.session.post(url=url) as resp:  
-            response = json.loads(await resp.text())    
+     if questionnumber and triviacategory and difficulty and questionnumber != None:   
+        url = R"https://opentdb.com/api.php?amount="+questionnumber+"&category="+triviacategory+"&difficulty="+difficulty+"&type="+questiontype
+        async with await self.session.get(url=url) as resp:  
+            response = json.loads(await resp.text())
+            correct_answers = await self.JsonParser(response)
 
+     else:
+         raise UserInputError("Incorrect entry! Try typing it again or use !help")
+
+    
 
 
 
      return
 
- async def JsonParser(dictionary):
+    async def Json_Parser(dictionary):
+        Correct_Answers= []
+        for x in dictionary['results']:
+            Correct_Answers.append(x['correct_answer'])
+        return Correct_Answers
 
-     return
-            
+    async def Dict_Publisher(self, ctx, dictionary, Correct_answers):
+        x=0
+        cog_embeds = []
+        for bob in dictionary['result']:
+         Answers_List= []   
+         Answers_List = bob['incorrect_answers']
+         Answers_List.append(bob['correct_answer'])
+         random.shuffle(Answers_List)  
+         x+=1   
+         embed = discord.Embed(title= "Your Trivia Question:",
+         descripton="Question #"+x,
+         color=Colors.ClemsonOrange)
+         embed.addfield(name="Question:", value=bob['question'])
+         embed.addfield(name="Category:", value=bob['category'])
+         embed.addfield(name="Pick your Answer choice:", inline=False)
+         a = 65
+         for iterative in Answers_List:
+            embed.addfield(name=chr(a)+":", value = iterative, inline=False)
+            a=a+1
+         cog_embeds.append(embed)
+        
+        msgembed = await self.bot.messenger.publish(Events.on_set_pageable_embed,
+                                         pages=cog_embeds,
+                                         author=ctx.author,
+                                         channel=ctx.channel,
+                                         timeout=360
+                                         ) 
+        await msgembed.add_reaction('🇦')
+        await msgembed.add_reaction('🇧')
+        await msgembed.add_reaction('🇨')
+        await msgembed.add_reaction('🇩')
+        reaction = await self.client.wait_for("reaction_add", timeout=None, check=check)
+        return msgembed
+
 
 
 
