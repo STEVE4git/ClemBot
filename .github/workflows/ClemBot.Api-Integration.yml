@@ -1,0 +1,34 @@
+name: ClemBot.Api Master integration
+
+on:
+  push:
+    branches: [ master ]
+    paths: 
+      - "ClemBot.Api/**"
+  pull_request:
+    branches: [ master ]
+    paths: 
+      - "ClemBot.Api/**"
+  workflow_dispatch:
+  
+jobs:
+  build: 
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ClemBot.Api
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Checkout repo
+      uses: actions/checkout@v2
+
+    - name: Add dotnet-format problem matcher
+      uses: xt0rted/dotnet-format-problem-matcher@v1
+
+    - name: Restore format dependencies
+      run: dotnet tool restore
+
+    - name: Run dotnet format
+      run: dotnet tool run dotnet-format
