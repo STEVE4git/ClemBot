@@ -5,7 +5,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from discord.ext.commands import Context, Converter
 from discord.ext.commands.errors import ConversionError
-
+from discord.ext.commands.errors import UserInputError
 from bot.consts import Claims
 from bot.errors import ConversionError
 
@@ -93,3 +93,128 @@ class HonorsConverter(Converter):
             raise ConversionError()
 
         return honors
+
+
+
+class TriviaConverter(Converter):
+    
+
+    async def matching_function(self,ctx: Context, *input: str)-> str:
+         
+        input_length = len(input)
+        case_index = 0
+        function_parameters = []
+        url = await self.url_builder(function_parameters, input_length)
+        while case_index < input_length:
+            match case_index:  #Revolves around beautiful O(1) based indexing
+                 case 0:
+                     if input[0].isnumeric():
+                         question_number = int(input[0])
+                         if 0 < question_number <= 50:
+                              function_parameters[0] = question_number
+                 case 1:
+                     if input[1].isnumeric():
+                         trivia_number = int(input[1])
+                         if 0 < trivia_number <= 24:
+                             function_parameters[1]=trivia_number + 8
+                         elif trivia_number == 0:
+                             function_parameters[1]=None
+                     else:
+                         trivia_category = input[1].lower()
+        
+                         for x in CATEGORYLIST_LOWER:
+                             if x.find(trivia_category) != -1:
+                                 return_this = CATEGORYLIST_LOWER.index(x) + 9
+                                 function_parameters[1]=return_this
+                 case 2:
+                     if input[2].isnumeric():
+                         evaluate_int = int(input[2])
+                         if 0 < evaluate_int <= 3:
+                             return_string = DIFFICULTY_LOWER[evaluate_int - 1]
+                             function_parameters[2]=return_string
+                         elif evaluate_int == 0:
+                             function_parameters[2] = None
+                     else:
+                         difficulty = input[2].lower()
+                         for x in DIFFICULTY_LOWER:
+                            
+                             if (x.find(difficulty) != -1):  #Searches the substring. If this ever comes up, its not a bug you can type in a and not find your category GIGO. It is better than exact case parsing.
+                                 function_parameters[2]=x
+                 case 3:
+                     if input[3].isnumeric():
+                         evaluate_int = int(input[3])
+                         if 0 < evaluate_int < 3:
+                             final_return = QUESTIONTYPE[evaluate_int - 1]
+                             function_parameters[2]=final_return
+                         elif evaluate_int == 0:
+                              function_parameters[2]= None
+                     else:
+                         question_type = input[3].lower()
+                         for x in QUESTIONTYPE:
+                             if (x.find(question_type) != -1):
+                                  function_parameters[3]=x
+            case_index += 1
+        if len(function_parameters) < 4:
+            return None #Easiest way to check for errors because it has to be the size of 4 or else     
+        max_index = input_length - 1
+        url = URL_BUILDER + str(function_parameters[0])
+        x = 1
+        while x <= max_index:
+            if function_parameters[x] != None:
+                match x:
+                    case 1:
+                       url= (f"{url}&category={str(function_parameters[1])}")
+                    case 2:
+                        url = (f"{url}&difficulty={function_parameters[2]}")
+                    case 3:
+                        url = (f"{url}&type={function_parameters[max_index]}")
+            x += 1
+
+        return url        
+
+
+
+
+
+
+URL_BUILDER = R"https://opentdb.com/api.php?amount="
+
+DEFAULT_URL = "https://opentdb.com/api.php?amount=10"
+
+DIFFICULTY = ["Easy",
+              "Medium",
+              "Hard"]
+
+DIFFICULTY_LOWER = [k.lower() for k in DIFFICULTY]
+
+QUESTIONTYPE = [
+    "multiple",
+    "boolean"
+]
+
+CATEGORYLIST = ["General-Knowledge",  #Including this out of consistency to avoid making the offset 10 for no reason. This will be the default value.
+                "Books",
+                "Film",
+                "Music",
+                "Musicals&Theatres",
+                "Television",
+                "Video-Games",
+                "Board-Games",
+                "Science&Nature",
+                "Computers",
+                "Mathematics",
+                "Mythology",
+                "Sports",
+                "Geography",
+                "History",
+                "Politics",
+                "Art",
+                "Celebrities",
+                "Animals",
+                "Vehicles",
+                "Comics",
+                "Gadgets",
+                "Japanese-Anime&Manga",
+                "Cartoon&Animations"]
+
+CATEGORYLIST_LOWER = [k.lower() for k in CATEGORYLIST]                        
